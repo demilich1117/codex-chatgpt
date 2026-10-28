@@ -1,0 +1,16 @@
+{
+  "display_name": "Codex / ChatGPT · 酒馆界面",
+  "author": "Tavern Theme Studio",
+  "version": "0.1.1",
+  "loading_order": 110,
+  "minimum_client_version": "1.18.0",
+  "js": "index.js",
+  "css": "style.css",
+  "auto_update": false,
+  "hooks": {
+    "disable": "disable",
+    "enable": "enable",
+    "delete": "disable"
+  },
+  "homePage": "https://github.com/demilich1117/codex-chatgpt"
+}

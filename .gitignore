@@ -1,0 +1,16 @@
+# Local artwork, references, runtime data and recovery history
+workspace/
+references/
+previews/
+release/
+versions/
+node_modules/
+.local/
+.build-*/
+.studio-artwork.json
+artwork.json
+migration-report*
+source/design-brief.md
+source/validation.md
+source/README.md
+source/studio.build.json
