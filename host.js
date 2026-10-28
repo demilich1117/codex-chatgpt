@@ -1,11 +1,18 @@
 // Internal ST imports are isolated here; verified against ST 1.19 and TT's ST 1.18 snapshot.
 export const context = () => window.SillyTavern.getContext();
 export async function pastChats() {
-  const ctx=context();
-  if(ctx.groupId != null) return (ctx.groups.find(g=>String(g.id)===String(ctx.groupId))?.chats || []).map(name=>({file_name:name}));
-  if(ctx.characterId == null) return [];
-  const {getPastCharacterChats}=await import('/script.js');
-  return getPastCharacterChats(ctx.characterId);
+  const ctx=context(), characterId=ctx.characterId, groupId=ctx.groupId;
+  if(groupId == null && characterId == null) return [];
+  const {timestampToMoment}=await import('/scripts/utils.js');
+  let chats;
+  if(groupId != null) {
+    const {getGroupPastChats}=await import('/scripts/group-chats.js');
+    chats=await getGroupPastChats(groupId);
+  } else {
+    const {getPastCharacterChats}=await import('/script.js');
+    chats=await getPastCharacterChats(characterId);
+  }
+  return chats.map(chat=>({...chat,lastTime:Number(timestampToMoment(chat.last_mes).valueOf())||0}));
 }
 export async function openCharacter(avatar) {
   const ctx=context(), id=ctx.characters.findIndex(c=>c.avatar===avatar);

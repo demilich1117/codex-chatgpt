@@ -1,5 +1,7 @@
 export const KEY = 'codex_chatgpt_theme';
-export const DEFAULTS = Object.freeze({enabled:true, mode:'dark', accent:'#0169cc', sidebarWidth:280, sidebarCollapsed:false, showIdentity:false, pinned:[]});
+export const SECTION_DEFAULTS = Object.freeze({pinned:false, characters:true, history:false, functions:true});
+export const SIDEBAR_PREVIEW_LIMIT = 5;
+export const DEFAULTS = Object.freeze({enabled:true, mode:'dark', accent:'#0169cc', sidebarWidth:280, sidebarCollapsed:false, showIdentity:false, pinned:[], collapsedSections:SECTION_DEFAULTS});
 export const PANELS = Object.freeze([
   ['ai-config-button','回复配置','sliders'], ['sys-settings-button','API 连接','plug'],
   ['advanced-formatting-button','回复格式','text'], ['WI-SP-button','世界书','book'],
@@ -12,6 +14,7 @@ export function normalize(raw = {}) {
     mode:['light','dark','system'].includes(raw.mode) ? raw.mode : 'dark',
     accent:/^#[\da-f]{6}$/i.test(raw.accent || '') ? raw.accent : DEFAULTS.accent,
     sidebarWidth:Math.min(420,Math.max(230,Number(raw.sidebarWidth) || 280)),
+    collapsedSections:Object.fromEntries(Object.entries(SECTION_DEFAULTS).map(([key,value])=>[key,typeof raw.collapsedSections?.[key]==='boolean'?raw.collapsedSections[key]:value])),
     pinned:Array.isArray(raw.pinned) ? raw.pinned.filter(x=>typeof x==='string') : [],
   };
 }
@@ -23,4 +26,11 @@ export function currentIdentity(ctx) {
   if (ctx.groupId != null) return `group:${ctx.groupId}`;
   const char=ctx.characters?.[ctx.characterId];
   return char?.avatar ? `character:${char.avatar}` : '';
+}
+
+// Use native last-message timestamps, never alphabetical filenames, for recency.
+export function recentChats(chats, activeName) {
+  const name=chat=>chat.file_name?.replace(/\.jsonl$/i,'');
+  return chats.filter(chat=>name(chat)).slice().sort((a,b)=>
+    Number(name(b)===activeName)-Number(name(a)===activeName) || (b.lastTime||0)-(a.lastTime||0));
 }

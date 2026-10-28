@@ -1,10 +1,12 @@
-import {KEY,DEFAULTS,PANELS,normalize,foreground,currentIdentity} from './model.js';
+import {KEY,DEFAULTS,PANELS,SIDEBAR_PREVIEW_LIMIT,normalize,foreground,currentIdentity,recentChats} from './model.js';
 import {context,pastChats,openCharacter,openChat,busy,clickNative} from './host.js';
 import {icon} from './icons.js';
 import {mountActivity} from './activity.js';
 
 let settings, controller, observer, roots=[], subscriptions=[], modeQuery, mobileQuery;
 let historyGeneration=0, sidebar, header, search, navBody, historyList, title, appearance, panelReturn=null;
+const expandedLists=new Set();
+let historyIdentity='';
 const $=s=>document.querySelector(s);
 const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text)el.textContent=text;return el;};
 const listen=(el,event,fn)=>el.addEventListener(event,fn,{signal:controller.signal});
@@ -32,10 +34,13 @@ function closeNative(){
  for(const [id] of PANELS){const p=$(`#${id} > .drawer-content`);if(p?.classList.contains('openDrawer'))clickNative(`#${id} > .drawer-toggle`);}
 }
 function openPanel(id,trigger){
- appearance.hidden=true;closeNative();panelReturn=trigger||document.activeElement;
- if(mobileQuery.matches)setSidebar(false,false);
- const panel=$(`#${id} > .drawer-content`);
+ const panel=$('#'+id+' > .drawer-content');
  if(!panel)throw new Error('原生面板在此宿主中不可用。');
+ appearance.hidden=true;panelReturn=trigger||document.activeElement;
+ // Test the requested drawer before closing others: a second click is a close.
+ if(panel.classList.contains('openDrawer')){closePanel();return;}
+ closeNative();
+ if(mobileQuery.matches)setSidebar(false,false);
  clickNative(`#${id} > .drawer-toggle`);
  requestAnimationFrame(()=>panel.querySelector('.cg-panel-header button')?.focus());
 }
@@ -84,18 +89,51 @@ function buildAppearance(){
  refresh();
 }
 function showAppearance(e){panelReturn=e?.currentTarget||document.activeElement;closeNative();if(mobileQuery.matches)setSidebar(false,false);appearance.hidden=false;appearance.querySelector('button').focus();}
+function panelButton(label,glyph,id,cls='cg-button'){
+ const b=button(label,glyph,e=>openPanel(id,e.currentTarget),cls);
+ // ST closes drawers on html mousedown/touchstart before click. These proxies
+ // are drawer controls too; contain only their press, preserving outside close.
+ for(const event of ['mousedown','touchstart'])listen(b,event,e=>e.stopPropagation());
+ b.dataset.cgPanel=id;b.setAttribute('aria-expanded',String($('#'+id+' > .drawer-content')?.classList.contains('openDrawer')||false));
+ return b;
+}
+function section(key,label,count){
+ const details=node('details','cg-nav-section');details.dataset.cgSection=key;
+ details.open=Boolean(search.value.trim())||!settings.collapsedSections[key];
+ const summary=node('summary','cg-section-label',label);
+ if(count!=null)summary.append(node('span','cg-section-count',String(count)));
+ details.append(summary);
+ // Summary click runs before the native open state flips, including keyboard
+ // activation. Save synchronously so a following search cannot swallow toggle.
+ listen(summary,'click',event=>{
+  if(event.defaultPrevented||search.value.trim())return;
+  settings.collapsedSections[key]=details.open;save();
+ });
+ return details;
+}
+function appendLimited(parent,key,items,render){
+ const limit=search.value.trim()?items.length:SIDEBAR_PREVIEW_LIMIT;
+ items.slice(0,limit).forEach(item=>parent.append(render(item)));
+ if(items.length<=limit)return;
+ const extra=node('div','cg-section-extra');extra.id='cg-extra-'+key;extra.hidden=!expandedLists.has(key);
+ items.slice(limit).forEach(item=>extra.append(render(item)));
+ const more=button('',null,()=>{extra.hidden=!extra.hidden;if(extra.hidden)expandedLists.delete(key);else expandedLists.add(key);update();});
+ more.classList.add('cg-section-more');more.dataset.cgMore=key;more.setAttribute('aria-controls',extra.id);
+ function update(){const label=extra.hidden?'显示全部（'+items.length+'）':'收起更多';more.textContent=label;more.title=label;more.setAttribute('aria-label',label);more.setAttribute('aria-expanded',String(!extra.hidden));}
+ update();parent.append(extra,more);
+}
 function renderNavigation(){
  const ctx=context(),query=search.value.trim().toLocaleLowerCase(),active=currentIdentity(ctx);
  navBody.replaceChildren();
- const items=[...ctx.characters.map(c=>({key:`character:${c.avatar}`,name:c.name,fn:()=>openCharacter(c.avatar)})),...ctx.groups.map(g=>({key:`group:${g.id}`,name:g.name,fn:()=>ctx.openGroupChat(g.id,g.chat_id)}))];
- for(const [heading,itemsInGroup] of [['置顶',items.filter(i=>settings.pinned.includes(i.key))],['角色与群聊',items.filter(i=>!settings.pinned.includes(i.key))]]){
+ const items=[...ctx.characters.map(c=>({key:'character:'+c.avatar,name:c.name,fn:()=>openCharacter(c.avatar),lastTime:c.date_last_chat||0})),...ctx.groups.map(g=>({key:'group:'+g.id,name:g.name,fn:()=>context().openGroupChat(g.id,g.chat_id),lastTime:g.date_last_chat||0}))];
+ for(const [key,heading,itemsInGroup] of [['pinned','置顶',items.filter(i=>settings.pinned.includes(i.key))],['characters','角色与群聊',items.filter(i=>!settings.pinned.includes(i.key)).sort((a,b)=>b.lastTime-a.lastTime)]]){
   const list=itemsInGroup.filter(i=>i.name.toLocaleLowerCase().includes(query));if(!list.length)continue;
-  navBody.append(node('h2','cg-section-label',heading));
-  for(const item of list){
+  const group=section(key,heading,list.length);
+  appendLimited(group,key,list,item=>{
    const row=node('div','cg-nav-row');row.classList.toggle('cg-selected',item.key===active);
    const b=button(item.name,item.key.startsWith('group:')?'users':'chat',()=>navigate(item.fn));b.setAttribute('aria-current',item.key===active?'page':'false');
-   const pin=button(settings.pinned.includes(item.key)?'取消置顶':'置顶','pin',()=>{settings.pinned=settings.pinned.includes(item.key)?settings.pinned.filter(k=>k!==item.key):[...settings.pinned,item.key];save();renderNavigation();},'cg-icon');pin.classList.add('cg-pin');pin.setAttribute('aria-pressed',String(settings.pinned.includes(item.key)));row.append(b,pin);navBody.append(row);
-  }
+   const pin=button(settings.pinned.includes(item.key)?'取消置顶':'置顶','pin',()=>{settings.pinned=settings.pinned.includes(item.key)?settings.pinned.filter(k=>k!==item.key):[...settings.pinned,item.key];save();renderNavigation();},'cg-icon');pin.classList.add('cg-pin');pin.setAttribute('aria-pressed',String(settings.pinned.includes(item.key)));row.append(b,pin);return row;
+  });navBody.append(group);
  }
  if(!navBody.children.length)navBody.append(node('p','cg-empty',query?'没有匹配的角色或群聊':'从角色管理选择或创建角色。'));
  document.body.classList.toggle('cg-group',ctx.groupId!=null);
@@ -103,16 +141,22 @@ function renderNavigation(){
  title.textContent=name||'新对话';title.title=ctx.chatId||'新对话';
 }
 async function renderHistory(){
- const generation=++historyGeneration,identity=currentIdentity(context());historyList.replaceChildren(node('p','cg-empty','正在读取聊天列表…'));
+ const generation=++historyGeneration,identity=currentIdentity(context());
+ if(identity!==historyIdentity){expandedLists.delete('history');historyIdentity=identity;}
+ const group=section('history','最近聊天');
+ group.title='当前角色或群聊的最近聊天';historyList.replaceChildren(group);
+ const loading=node('p','cg-empty','正在读取聊天列表…');group.append(loading);
  try{
   const chats=await pastChats();if(generation!==historyGeneration||identity!==currentIdentity(context())||!controller)return;
-  historyList.replaceChildren();const ctx=context(),query=search.value.trim().toLocaleLowerCase();
-  for(const chat of chats.filter(c=>c.file_name?.toLocaleLowerCase().includes(query)).slice(0,30)){
+  loading.remove();const ctx=context(),query=search.value.trim().toLocaleLowerCase();
+  const list=recentChats(chats,ctx.chatId).filter(c=>c.file_name.toLocaleLowerCase().includes(query));
+  group.querySelector('summary').append(node('span','cg-section-count',String(list.length)));
+  appendLimited(group,'history',list,chat=>{
    const name=chat.file_name.replace(/\.jsonl$/i,''),b=button(name,'chat',()=>navigate(()=>openChat(name,ctx.groupId)));
-   b.classList.toggle('cg-selected',name===ctx.chatId);historyList.append(b);
-  }
-  if(!historyList.children.length)historyList.append(node('p','cg-empty',query?'没有匹配的聊天':'当前角色还没有历史聊天。'));
- }catch(e){if(generation===historyGeneration)historyList.replaceChildren(button('读取失败，点击重试','history',renderHistory));console.warn(e);}
+   b.classList.toggle('cg-selected',name===ctx.chatId);b.setAttribute('aria-current',name===ctx.chatId?'page':'false');return b;
+  });
+  if(!list.length)group.append(node('p','cg-empty',query?'没有匹配的聊天':'当前角色还没有历史聊天。'));
+ }catch(e){if(generation===historyGeneration){loading.remove();group.append(button('读取失败，点击重试','history',renderHistory));}console.warn(e);}
 }
 function mount(){
  if(controller)return;
@@ -123,15 +167,15 @@ function mount(){
  if(!settings.enabled)return;
  document.body.classList.add('cg-active');setAppearance();
  const rail=node('nav','cg-rail');rail.setAttribute('aria-label','快捷导航');
- rail.append(button('展开或收起侧栏','panel',()=>setSidebar(settings.sidebarCollapsed),'cg-icon'),button('角色与群聊','users',e=>openPanel('rightNavHolder',e.currentTarget),'cg-icon'),button('历史聊天','history',()=>openNativeAction('#option_select_chat'),'cg-icon'),button('扩展','grid',e=>openPanel('extensions-settings-button',e.currentTarget),'cg-icon'),button('外观','settings',showAppearance,'cg-icon'));
+ rail.append(button('展开或收起侧栏','panel',()=>setSidebar(settings.sidebarCollapsed),'cg-icon'),panelButton('角色与群聊','users','rightNavHolder','cg-icon'),button('历史聊天','history',()=>openNativeAction('#option_select_chat'),'cg-icon'),panelButton('扩展','grid','extensions-settings-button','cg-icon'),button('外观','settings',showAppearance,'cg-icon'));
  sidebar=node('aside','cg-sidebar');sidebar.id='cg-sidebar';sidebar.setAttribute('aria-label','侧栏');
  const top=node('div','cg-sidebar-heading');top.append(node('strong','cg-brand','Codex'),button('收起侧栏','panel',()=>setSidebar(false),'cg-icon'));sidebar.append(top);
  const searchLabel=node('label','cg-search');searchLabel.append(icon('search'));search=node('input');search.type='search';search.placeholder='搜索角色与当前聊天';search.setAttribute('aria-label','搜索角色与当前聊天');searchLabel.append(search);sidebar.append(searchLabel);
  const scroll=node('div','cg-sidebar-scroll');
- scroll.append(button('角色与群聊','users',e=>openPanel('rightNavHolder',e.currentTarget)),button('管理当前聊天','history',()=>openNativeAction('#option_select_chat')));
- navBody=node('div');scroll.append(navBody,node('h2','cg-section-label','当前角色的聊天'));historyList=node('div','cg-history');scroll.append(historyList);
- const functions=node('details','cg-functions');functions.open=true;const summary=node('summary','cg-section-label','酒馆功能');functions.append(summary);
- for(const [id,label,glyph]of PANELS){const b=button(label,glyph,e=>openPanel(id,e.currentTarget));b.dataset.cgPanel=id;b.setAttribute('aria-expanded','false');functions.append(b);}scroll.append(functions);sidebar.append(scroll);
+ scroll.append(panelButton('角色与群聊','users','rightNavHolder'),button('管理当前聊天','history',()=>openNativeAction('#option_select_chat')));
+ navBody=node('div');scroll.append(navBody);historyList=node('div','cg-history');scroll.append(historyList);
+ const functions=section('functions','酒馆功能');functions.classList.add('cg-functions');
+ for(const [id,label,glyph]of PANELS)functions.append(panelButton(label,glyph,id));scroll.append(functions);sidebar.append(scroll);
  const footer=node('div','cg-sidebar-footer');footer.append(button('新对话','compose',()=>navigate(()=>openNativeAction('#option_start_new_chat')),'cg-new-chat'),button('外观','settings',showAppearance,'cg-icon'));sidebar.append(footer);
  const grip=node('div','cg-resize');grip.tabIndex=0;grip.setAttribute('role','separator');grip.setAttribute('aria-orientation','vertical');grip.setAttribute('aria-label','侧栏宽度');
  listen(grip,'pointerdown',e=>{grip.setPointerCapture(e.pointerId);});listen(grip,'pointermove',e=>{if(grip.hasPointerCapture(e.pointerId)){settings.sidebarWidth=normalize({sidebarWidth:e.clientX-48}).sidebarWidth;setAppearance();}});listen(grip,'pointerup',save);listen(grip,'keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();settings.sidebarWidth=normalize({sidebarWidth:settings.sidebarWidth+(e.key==='ArrowRight'?10:-10)}).sidebarWidth;setAppearance();save();}});sidebar.append(grip);
@@ -156,7 +200,7 @@ function mount(){
  renderNavigation();renderHistory();
 }
 function unmount(){
- historyGeneration++;controller?.abort();controller=null;observer?.disconnect();observer=null;
+ historyGeneration++;historyIdentity='';expandedLists.clear();controller?.abort();controller=null;observer?.disconnect();observer=null;
  subscriptions.splice(0).forEach(fn=>fn());roots.splice(0).forEach(el=>el.remove());
  for(const el of document.querySelectorAll('.cg-native-panel'))el.classList.remove('cg-native-panel');
  document.body.classList.remove('cg-active','cg-collapsed','cg-nav-open','cg-panel-open','cg-identities','cg-group');

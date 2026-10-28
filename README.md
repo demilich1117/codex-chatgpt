@@ -2,17 +2,17 @@
 
 为 SillyTavern 制作的独立界面扩展与配套主题。桌面采用 Codex 风格的分栏导航，手机采用 ChatGPT 风格的会话页与推页侧栏。
 
-当前版本 **0.1.2**。本项目并非 OpenAI 官方客户端；名称用于说明界面设计参考。
+当前版本 **0.1.3**。本项目并非 OpenAI 官方客户端；名称用于说明界面设计参考。
 
 ![桌面界面，虚构测试对话](docs/screenshots/desktop.png)
 
 <img src="docs/screenshots/mobile.png" alt="手机界面，虚构测试对话" width="320">
 
-## 0.1.2 视觉精修
+## 0.1.3 阅读与导航修复
 
-细化侧栏、页头、输入区及抽屉的接缝与表面层次；统一按钮的普通、悬停、按下、焦点和禁用状态；修复右上角会话菜单点击后立即关闭。保留现有阅读布局和字号。
+阅读宽度与字号可在原生用户设置中调整；侧栏分组可折叠，默认显示最多 5 个置顶项和 5 条最近聊天；角色图标再次点击可收回抽屉。修复深色主题把透明前端变为白底的问题。
 
-从 [v0.1.2 发行版](https://github.com/demilich1117/codex-chatgpt/releases/tag/v0.1.2) 下载手动安装包或独立主题 JSON。更新同名扩展后刷新，再导入并选择 **Codex — ChatGPT · 0.1.2**。
+从 [v0.1.3 发行版](https://github.com/demilich1117/codex-chatgpt/releases/tag/v0.1.3) 下载手动安装包或独立主题 JSON。更新同名扩展后刷新，再导入并选择 **Codex — ChatGPT · 0.1.3**；扩展和已保存的主题 CSS 需要一起更新。
 
 ## 安装
 
@@ -22,15 +22,15 @@
    https://github.com/demilich1117/codex-chatgpt
    ```
 
-2. 安装后刷新酒馆。从 [最新发行版](https://github.com/demilich1117/codex-chatgpt/releases/latest) 下载 **Codex-ChatGPT-Theme-0.1.2.json**。
-3. 打开 **用户设置 → UI 主题**，导入该 JSON，再手动选择 **Codex — ChatGPT · 0.1.2**。导入不会自动选中主题。
+2. 安装后刷新酒馆。从 [最新发行版](https://github.com/demilich1117/codex-chatgpt/releases/latest) 下载 **Codex-ChatGPT-Theme-0.1.3.json**。
+3. 打开 **用户设置 → UI 主题**，导入该 JSON，再手动选择 **Codex — ChatGPT · 0.1.3**。导入不会自动选中主题。
 4. 在侧栏底部齿轮中选择深色、浅色、跟随系统和强调色。
 
 主题与扩展配套使用。仓库根目录已包含可直接加载的扩展，无需用户构建，也不需要额外 Node 后端或在线字体服务。
 
 ### 手动安装
 
-下载发行版的 `Codex-ChatGPT-0.1.2.zip`，解压后将 `codex-chatgpt` 整个文件夹放到 SillyTavern 的 `public/scripts/extensions/third-party/`，确保扩展目录内直接有 `manifest.json`。刷新后导入文件夹内的 `themes/Codex-ChatGPT.json` 并选择主题。该路径为桌面 SillyTavern 的全用户安装方式。
+下载发行版的 `Codex-ChatGPT-0.1.3.zip`，解压后将 `codex-chatgpt` 整个文件夹放到 SillyTavern 的 `public/scripts/extensions/third-party/`，确保扩展目录内直接有 `manifest.json`。刷新后导入文件夹内的 `themes/Codex-ChatGPT.json` 并选择主题。该路径为桌面 SillyTavern 的全用户安装方式。
 
 已手动安装到同名目录的用户可使用手动包更新；不要同时加载两份本扩展。
 
@@ -43,8 +43,8 @@
 ## 功能
 
 - **双端布局**：桌面侧栏可收起、拖动调宽；手机侧栏打开时将聊天页推向右侧。没有 Chat/Work 切换。
-- **角色与群聊**：快速切换、按名称搜索、置顶；完整创建、导入和编辑功能仍在原生角色管理中。
-- **聊天记录**：列出当前角色或群聊的最多 30 份聊天，按名称筛选；“管理当前聊天”打开原生完整聊天档案，可新建、重命名、导入、导出和删除。
+- **角色与群聊**：快速切换、按名称搜索、置顶、分组折叠；完整创建、导入和编辑功能仍在原生角色管理中。
+- **聊天记录**：当前角色或群聊默认预览最近 5 份聊天，可展开全部、按名称筛选；“管理当前聊天”打开原生完整聊天档案，可新建、重命名、导入、导出和删除。
 - **完整原生分组**：回复配置、API 连接、回复格式、世界书、用户设置、背景、扩展、用户角色、角色管理。
 - **外观**：深色、浅色、跟随系统，七种预设与自定义强调色；单聊可开关逐条头像与名字，群聊保留发言者身份。
 - **推理与生成**：Thinking / Working 轻量扫光动画，根据原生状态显示；结束后保留原生推理记录和时长，支持减少动态效果。
@@ -65,6 +65,7 @@ Node.js 20.11+，无需安装构建依赖：
 
 ```sh
 node scripts/build-public.mjs
+node scripts/test-model.mjs
 ```
 
 维护 `source/theme.css`、`source/theme-fields.json` 和 `source/extension/`。构建会将字体内嵌并更新根目录扩展文件及 `themes/Codex-ChatGPT.json`；请同时提交源码和生成文件。
