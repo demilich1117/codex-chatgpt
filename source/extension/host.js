@@ -23,5 +23,14 @@ export function busy() {
 export function clickNative(selector) {
   const el=document.querySelector(selector);
   if(!el) throw new Error('此宿主没有这个原生入口。');
+  // The options anchor is hidden by this theme. ST otherwise treats its forwarded
+  // click as outside the menu (the hidden anchor cannot be hovered or focused).
+  // Contain only this synthetic click; subsequent outside clicks remain native.
+  if(selector === '#options_button') {
+    const contain = event => event.stopPropagation();
+    el.addEventListener('click', contain, {once:true});
+    try { el.click(); } finally { el.removeEventListener('click', contain); }
+    return;
+  }
   el.click();
 }

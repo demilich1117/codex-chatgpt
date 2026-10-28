@@ -1,7 +1,7 @@
 {
   "display_name": "Codex / ChatGPT · 酒馆界面",
   "author": "Tavern Theme Studio",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "loading_order": 110,
   "minimum_client_version": "1.18.0",
   "js": "index.js",

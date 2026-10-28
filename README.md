@@ -2,11 +2,17 @@
 
 为 SillyTavern 制作的独立界面扩展与配套主题。桌面采用 Codex 风格的分栏导航，手机采用 ChatGPT 风格的会话页与推页侧栏。
 
-当前版本 **0.1.1**。本项目并非 OpenAI 官方客户端；名称用于说明界面设计参考。
+当前版本 **0.1.2**。本项目并非 OpenAI 官方客户端；名称用于说明界面设计参考。
 
 ![桌面界面，虚构测试对话](docs/screenshots/desktop.png)
 
 <img src="docs/screenshots/mobile.png" alt="手机界面，虚构测试对话" width="320">
+
+## 0.1.2 视觉精修
+
+细化侧栏、页头、输入区及抽屉的接缝与表面层次；统一按钮的普通、悬停、按下、焦点和禁用状态；修复右上角会话菜单点击后立即关闭。保留现有阅读布局和字号。
+
+从 [v0.1.2 发行版](https://github.com/demilich1117/codex-chatgpt/releases/tag/v0.1.2) 下载手动安装包或独立主题 JSON。更新同名扩展后刷新，再导入并选择 **Codex — ChatGPT · 0.1.2**。
 
 ## 安装
 
@@ -16,15 +22,15 @@
    https://github.com/demilich1117/codex-chatgpt
    ```
 
-2. 安装后刷新酒馆。从 [最新发行版](https://github.com/demilich1117/codex-chatgpt/releases/latest) 下载 **Codex-ChatGPT-Theme-0.1.1.json**。
-3. 打开 **用户设置 → UI 主题**，导入该 JSON，再手动选择 **Codex — ChatGPT · 0.1.1**。导入不会自动选中主题。
+2. 安装后刷新酒馆。从 [最新发行版](https://github.com/demilich1117/codex-chatgpt/releases/latest) 下载 **Codex-ChatGPT-Theme-0.1.2.json**。
+3. 打开 **用户设置 → UI 主题**，导入该 JSON，再手动选择 **Codex — ChatGPT · 0.1.2**。导入不会自动选中主题。
 4. 在侧栏底部齿轮中选择深色、浅色、跟随系统和强调色。
 
 主题与扩展配套使用。仓库根目录已包含可直接加载的扩展，无需用户构建，也不需要额外 Node 后端或在线字体服务。
 
 ### 手动安装
 
-下载发行版的 `Codex-ChatGPT-0.1.1.zip`，解压后将 `codex-chatgpt` 整个文件夹放到 SillyTavern 的 `public/scripts/extensions/third-party/`，确保扩展目录内直接有 `manifest.json`。刷新后导入文件夹内的 `themes/Codex-ChatGPT.json` 并选择主题。该路径为桌面 SillyTavern 的全用户安装方式。
+下载发行版的 `Codex-ChatGPT-0.1.2.zip`，解压后将 `codex-chatgpt` 整个文件夹放到 SillyTavern 的 `public/scripts/extensions/third-party/`，确保扩展目录内直接有 `manifest.json`。刷新后导入文件夹内的 `themes/Codex-ChatGPT.json` 并选择主题。该路径为桌面 SillyTavern 的全用户安装方式。
 
 已手动安装到同名目录的用户可使用手动包更新；不要同时加载两份本扩展。
 
