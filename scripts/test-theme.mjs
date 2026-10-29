@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import {isCodexTheme,currentThemeMatches} from '../source/extension/theme.js';
+const css=await fs.readFile(new URL('../source/theme.css',import.meta.url),'utf8');
+assert.equal(isCodexTheme(css),true);
+assert.equal(isCodexTheme(css.replace('0.1.3','0.1.1')),true);
+for(const other of [null,undefined,'','body {color:red}','/* Codex / ChatGPT 0.1.3 */ body {}','body.cg-active {--cg-surface-page:black}'])assert.equal(isCodexTheme(other),false);
+const native={textContent:css,sheet:{disabled:false}},preview={textContent:'',sheet:{disabled:false}};
+const doc={getElementById:id=>id==='custom-style'?native:id==='tts-preview-style'?preview:null};
+assert.equal(currentThemeMatches(doc),true);
+preview.textContent='body {color: red}';assert.equal(currentThemeMatches(doc),false);
+preview.textContent=css;assert.equal(currentThemeMatches(doc),true);
+preview.textContent='';native.sheet.disabled=true;assert.equal(currentThemeMatches(doc),false);
+native.sheet.disabled=false;assert.equal(currentThemeMatches(doc),true);
+assert.equal(currentThemeMatches({getElementById:()=>null}),false);
+console.log('Theme identity, legacy CSS, absent/disabled CSS and preview precedence passed.');

@@ -1,0 +1,28 @@
+/* Extension-owned controls also work with already-saved 0.1.x native themes. */
+.cg-active :is(.cg-row-actions,.cg-quick-action) { width: 28px; height: 32px; flex: 0 0 auto; opacity: 0; }
+.cg-active :is(.cg-row-actions,.cg-quick-action) svg { width: 16px; height: 16px; }
+.cg-active .cg-nav-row:is(:hover,:focus-within) :is(.cg-row-actions,.cg-quick-action),
+.cg-active .cg-row-actions[aria-expanded='true'] { opacity: 1; }
+.cg-active .cg-quick-action[aria-pressed='true'] { opacity: 1; color: var(--cg-accent); }
+.cg-active .cg-nav-row[data-pinned='true'] > .cg-button > svg { color: var(--cg-accent); }
+.cg-active .cg-actions-menu { position: fixed; z-index: 100; width: 210px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 5px; border: 1px solid var(--cg-edge); border-radius: 12px; background: var(--cg-surface-raised); color: var(--cg-text-primary); box-shadow: var(--cg-shadow-panel); font: 14px/1.45 var(--cg-font); }
+.cg-active .cg-actions-menu .cg-button { min-height: 38px; padding: 8px 10px; font-size: 14px; }
+.cg-active .cg-actions-menu .cg-danger { color: #e56868; border-top: 1px solid var(--cg-seam); border-radius: 0 0 8px 8px; margin-top: 4px; }
+.cg-active[data-cg-mode='light'] .cg-actions-menu .cg-danger { color: #b42318; }
+.cg-active .cg-archive-note { padding: 0 10px; color: var(--cg-text-secondary); font-size: 12px; }
+@media (hover: none), (max-width: 1000px) {
+  .cg-active :is(.cg-row-actions,.cg-quick-action) { opacity: .75; width: 36px; height: 44px; padding: 8px; }
+  .cg-active .cg-actions-menu .cg-button { min-height: 44px; }
+}
+@media (max-width: 1000px) {
+  .cg-active .cg-quick-action { display: none; }
+  .cg-active .cg-row-actions { width: 44px; }
+}
+@media (min-width: 1001px) {
+  body.cg-active #top-settings-holder .drawer-content.cg-native-panel { width: min(var(--cg-panel-width,760px),calc(100vw - var(--cg-nav-space) - 24px)); }
+}
+.cg-panel-resize { position: fixed; z-index: 55; width: 12px; cursor: ew-resize; touch-action: none; border-radius: 6px; }
+.cg-panel-resize::after { content: ''; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; border-radius: 2px; background: transparent; }
+.cg-panel-resize:is(:hover,:focus-visible)::after,.cg-panel-resizing .cg-panel-resize::after { background: var(--cg-accent); }
+.cg-panel-resize:focus-visible { outline: 2px solid var(--cg-accent); outline-offset: 1px; }
+.cg-panel-resizing,.cg-panel-resizing * { cursor: ew-resize !important; user-select: none !important; }

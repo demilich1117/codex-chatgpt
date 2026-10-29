@@ -1,4 +1,5 @@
 const paths = {
+ archive:'M3 3h18v5H3ZM5 8v13h14V8M10 12h4', restore:'M3 3h18v5H3ZM5 8v13h14V8M12 17v-6m-3 3 3-3 3 3', trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
  menu:'M4 6h16M4 12h12M4 18h8', close:'m6 6 12 12M18 6 6 18',
  compose:'M12 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-7M16 3l5 5M10 14l2-6 7-7 5 5-7 7-7 2Z',
  search:'M21 21l-5-5M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
