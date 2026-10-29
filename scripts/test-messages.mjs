@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {formatDuration,generationDuration,canRegenerate} from '../source/extension/message-state.js';
+assert.equal(formatDuration(229000),'3m 49s');
+assert.equal(formatDuration(60000),'1m 0s');
+assert.equal(formatDuration(3601000),'1h 0m 1s');
+assert.equal(formatDuration(999),'0s');
+for(const value of [null,undefined,NaN,Infinity,-1])assert.equal(formatDuration(value),null);
+assert.equal(generationDuration({gen_started:'2026-01-01T00:00:00Z',gen_finished:'2026-01-01T00:03:49Z'}),229000);
+for(const value of [{},{gen_started:'bad',gen_finished:'bad'},{gen_started:2000,gen_finished:1000},{gen_started:0}])assert.equal(generationDuration(value),null);
+assert.equal(generationDuration({gen_started:0,gen_finished:0}),0);
+const chat=[{is_user:false},{is_user:true},{is_user:false}];
+assert.equal(canRegenerate(chat,2),true);
+for(const index of [0,1,3,-1,1.5])assert.equal(canRegenerate(chat,index),false);
+for(const message of [{is_user:true},{is_system:true},{extra:{tool_invocations:[{}]}}])assert.equal(canRegenerate([message],0),false);
+assert.equal(canRegenerate(null,0),false);
+console.log('Duration boundaries, missing timestamps and regenerate target guards passed.');

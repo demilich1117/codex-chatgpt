@@ -5,6 +5,8 @@ import {icon} from './icons.js';
 import {mountActivity} from './activity.js';
 import {currentThemeMatches,watchTheme} from './theme.js';
 import {mountPanelResize} from './panel-resize.js';
+import {mountMessageControls} from './message-controls.js';
+import {mountWorldInfo} from './world-info.js';
 
 let settings, controller, observer, roots=[], subscriptions=[], modeQuery, mobileQuery;
 let historyGeneration=0, sidebar, header, search, navBody, historyList, title, appearance, panelReturn=null;
@@ -245,7 +247,7 @@ function mount(){
  if(controller)return;
  controller=new AbortController();modeQuery=matchMedia('(prefers-color-scheme: dark)');mobileQuery=matchMedia('(max-width: 1000px)');
  document.body.classList.add('cg-active');setAppearance();
- const actionStyles=node('link');actionStyles.rel='stylesheet';actionStyles.href=new URL('./sidebar.css',import.meta.url).href;document.head.append(actionStyles);roots.push(actionStyles);
+ for(const file of ['sidebar.css','messages.css','world-info.css']){const styles=node('link');styles.rel='stylesheet';styles.href=new URL('./'+file,import.meta.url).href;document.head.append(styles);roots.push(styles);}
  const rail=node('nav','cg-rail');rail.setAttribute('aria-label','快捷导航');
  rail.append(button('展开或收起侧栏','panel',()=>setSidebar(settings.sidebarCollapsed),'cg-icon'),panelButton('角色与群聊','users','rightNavHolder','cg-icon'),button('历史聊天','history',()=>openNativeAction('#option_select_chat'),'cg-icon'),panelButton('扩展','grid','extensions-settings-button','cg-icon'),button('外观','settings',showAppearance,'cg-icon'));
  sidebar=node('aside','cg-sidebar');sidebar.id='cg-sidebar';sidebar.setAttribute('aria-label','侧栏');
@@ -264,7 +266,7 @@ function mount(){
  header=node('header','cg-header');const menu=button('打开侧栏','menu',()=>setSidebar(!document.body.classList.contains('cg-nav-open')),'cg-icon');menu.dataset.cgMenu='';menu.setAttribute('aria-controls','cg-sidebar');menu.setAttribute('aria-expanded','false');title=node('strong','cg-chat-title','新对话');header.append(menu,title,button('会话操作','more',()=>clickNative('#options_button'),'cg-icon'));
  const shade=button('关闭侧栏',null,()=>setSidebar(false),'cg-dismiss');shade.tabIndex=-1;
  document.body.append(rail,sidebar,header,shade);roots.push(rail,sidebar,header,shade);
- buildPanels();buildAppearance();subscriptions.push(mountActivity(context));
+ buildPanels();buildAppearance();subscriptions.push(mountMessageControls(context),mountActivity(context),mountWorldInfo());
  listen(search,'input',()=>{renderNavigation();renderHistory();});listen(modeQuery,'change',setAppearance);
  const resize=()=>{document.body.classList.remove('cg-nav-open');$('#sheld').inert=false;sidebar.inert=mobileQuery.matches||settings.sidebarCollapsed;$('.cg-brand').textContent=mobileQuery.matches?'ChatGPT':'Codex';};listen(mobileQuery,'change',resize);resize();
  listen(document,'keydown',e=>{

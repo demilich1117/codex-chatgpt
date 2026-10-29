@@ -1,0 +1,23 @@
+/* Native toolbars keep their handlers; each message owns an in-flow footer. */
+.cg-active #chat .cg-message-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:4px; order:6; width:100%; min-width:0; margin-top:8px; color:var(--cg-text-muted); }
+.cg-active #chat .mes[is_user='true'] .cg-message-actions { justify-content:flex-end; }
+.cg-active:not(.cg-identities):not(.cg-group) #chat .mes .ch_name { min-height:0; margin:0; }
+.cg-active:not(.cg-identities):not(.cg-group) #chat .mes .ch_name .timestamp-icon { display:none; }
+.cg-active #chat .cg-message-actions .mes_buttons { margin:0; flex:0 1 auto; justify-content:flex-start; flex-wrap:wrap; max-width:100%; opacity:.7; }
+.cg-active #chat .mes[is_user='true'] .cg-message-actions :is(.mes_buttons,.mes_edit_buttons) { justify-content:flex-end; }
+.cg-active #chat .cg-message-actions .mes_edit_buttons { justify-content:flex-start; margin:0; max-width:100%; }
+.cg-active #chat .mes:is(:hover,:focus-within) .cg-message-actions .mes_buttons { opacity:1; }
+.cg-active #chat .cg-regenerate { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:0; background:transparent; color:inherit; cursor:pointer; box-shadow:none; margin:0; }
+.cg-active #chat .cg-regenerate svg { width:15px; height:15px; }
+.cg-active #chat .cg-regenerate:focus-visible { outline:2px solid var(--cg-accent); outline-offset:2px; }
+.cg-active #chat .cg-work-duration .mes_reasoning_header_title { display:none; }
+.cg-active #chat :is(.cg-work-label,.cg-work-summary) { color:var(--cg-text-muted); font:calc(var(--cg-body-size) * .93)/1.6 var(--cg-font); font-variant-numeric:tabular-nums; }
+.cg-active #chat .cg-work-summary { display:block; margin:0 0 12px; }
+@supports(background-clip:text) {
+ .cg-active #chat .cg-thinking .cg-work-label { background-image:linear-gradient(105deg,var(--cg-text-muted) 30%,var(--cg-text-primary) 48%,var(--cg-text-muted) 66%); background-size:240% 100%; background-clip:text; color:transparent; animation:cg-text-sweep 1.9s ease-in-out infinite; }
+}
+@media(max-width:1000px) {
+ .cg-active #chat .cg-message-actions .mes_button { min-width:40px; min-height:44px; }
+ .cg-active #chat .cg-message-actions .mes_edit_buttons .menu_button { min-width:40px; min-height:44px; }
+}
+@media(prefers-reduced-motion:reduce) { .cg-active #chat .cg-thinking .cg-work-label { animation:none; background:none; color:var(--cg-text-muted); } }
