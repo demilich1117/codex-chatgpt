@@ -1,0 +1,38 @@
+/* Tavern Helper 4.12 uses these sibling hit targets and owns pointer capture,
+   resizing, snapping and stored dimensions. The touch layout emits only bottom. */
+.cg-active .dialog-teleported.dialog-resizable:has(> .TH-custom-tailwind[role='dialog']) {
+  --cg-grip-edge: 12px;
+  --cg-grip-corner: 18px;
+}
+.cg-active .dialog-teleported.dialog-resizable:has(> .TH-custom-tailwind[role='dialog']) > .absolute[class*='-resize'] {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+}
+.cg-active .dialog-teleported.dialog-resizable > .cursor-ew-resize { width: var(--cg-grip-edge); cursor: ew-resize; }
+.cg-active .dialog-teleported.dialog-resizable > .cursor-ns-resize { height: var(--cg-grip-edge); cursor: ns-resize; }
+.cg-active .dialog-teleported.dialog-resizable > :is(.cursor-ne-resize, .cursor-nw-resize) {
+  width: var(--cg-grip-corner); height: var(--cg-grip-corner); z-index: 21;
+}
+.cg-active .dialog-teleported.dialog-resizable > .bottom-0.right-0.cursor-nw-resize { opacity: 1; }
+.cg-active .dialog-teleported.dialog-resizable > .bottom-0.right-0.cursor-nw-resize::after {
+  content: ''; pointer-events: none; position: absolute; inset: 5px 4px 4px 5px;
+  border: solid var(--cg-text-muted); border-width: 0 2px 2px 0; border-bottom-right-radius: 3px;
+}
+/* Mobile helper windows budget exactly 45px above the stack. Preserve the
+   native translation for multiple open dialogs and keep the bottom grip onscreen. */
+.cg-active #movingDivs > .dialog-teleported.dialog-resizable:has(> .TH-custom-tailwind[role='dialog']) {
+  top: min(45px, var(--topBarBlockSize)) !important;
+}
+.cg-active #movingDivs > .dialog-teleported.dialog-resizable > .bottom-0.cursor-ns-resize {
+  height: 18px; opacity: 1;
+}
+.cg-active #movingDivs > .dialog-teleported.dialog-resizable > .bottom-0.cursor-ns-resize::after {
+  content: ''; position: absolute; pointer-events: none; width: 40px; height: 4px;
+  left: 50%; bottom: 4px; transform: translateX(-50%); border-radius: 3px; background: var(--cg-text-muted);
+}
+@media (min-width: 1001px) {
+  .cg-active #movingDivs > :is(#floatingPrompt, #cfgConfig, #logprobsViewer):not(.maximized) {
+    resize: both; overflow: auto; width: min(420px, 90dvw);
+  }
+}

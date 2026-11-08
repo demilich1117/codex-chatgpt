@@ -1,4 +1,6 @@
 // Internal ST imports are isolated here; verified against ST 1.19 and TT's ST 1.18 snapshot.
+import {primaryBook, bookInUse} from './sidebar-state.js';
+
 export const context = () => window.SillyTavern.getContext();
 export async function pastChats() {
   const ctx=context(), characterId=ctx.characterId, groupId=ctx.groupId;
@@ -47,20 +49,101 @@ export function assertSelection(token) {
   assertIdle();
   if(selectionToken()!==token)throw new Error('当前对话已变化，操作已取消，请重新选择。');
 }
+const isTauriTavern = () => Boolean(window.__TAURITAVERN__ || window.__TAURITAVERN_MAIN_READY__);
+
+async function readCard(avatar) {
+  const response = await fetch('/api/characters/get', {
+    method:'POST', headers:context().getRequestHeaders(), body:JSON.stringify({avatar_url:avatar}),
+  });
+  if (!response.ok) throw new Error('无法核对角色卡的当前绑定，请重新打开删除菜单。');
+  return response.json();
+}
+
+// TT 2.3 deletes the primary book in its character repository. Detach that one
+// field for a confirmed keep operation; the embedded character_book stays intact.
+async function setTauriBinding(avatar, world) {
+  const response = await fetch('/api/characters/merge-attributes', {
+    method:'POST', headers:context().getRequestHeaders(),
+    body:JSON.stringify({avatar, data:{extensions:{world}}}),
+  });
+  if (!response.ok) throw new Error('无法更新目标角色卡的世界书绑定。');
+}
+
+async function removeCharacter(entry, options, token, native) {
+  if (typeof native.deleteCharacter !== 'function') throw new Error('此宿主不支持快捷删除角色，请使用原生角色管理。');
+  const worlds = await import('/scripts/world-info.js');
+  const avatar = entry.avatar, book = primaryBook(await readCard(avatar));
+  assertSelection(token);
+  if (!context().characters.some(c => c.avatar === avatar) || book !== options.book)
+    throw new Error('角色卡或绑定世界书已变化，请重新确认。');
+  if (options.deleteBook && bookInUse(book, avatar, worlds, context()))
+    throw new Error('世界书正在被其他设置使用，请重新确认并保留它。');
+  const detach = isTauriTavern() && book && !options.deleteBook;
+  let detachAttempted = false, deleted = false;
+  try {
+    if (detach) {
+      detachAttempted = true;
+      await setTauriBinding(avatar, '');
+      if (primaryBook(await readCard(avatar))) throw new Error('宿主仍绑定了世界书，已停止删除。');
+      assertSelection(token);
+    }
+    deleted = await native.deleteCharacter(avatar, {deleteChats:options.deleteChats});
+    if (!deleted) throw new Error('角色未删除，已保留侧栏状态。');
+  } finally {
+    if (detachAttempted && !deleted) {
+      try {
+        if (!primaryBook(await readCard(avatar))) await setTauriBinding(avatar, book);
+      } catch {
+        throw new Error(`请检查角色卡状态。若卡片仍在，请核对主世界书「${book}」的绑定。`);
+      }
+    }
+  }
+  if (!options.deleteBook) return;
+  try {
+    if (!worlds.world_names.includes(book)) return; // Already removed by TT.
+    if (bookInUse(book, avatar, worlds, context()))
+      return `角色已删除。世界书「${book}」出现其他绑定，已保留。`;
+    if (await worlds.deleteWorldInfo(book)) return;
+  } catch (error) { console.warn('[codex-chatgpt] world removal', error); }
+  return `角色已删除。未能确认世界书「${book}」已删除，请在世界书列表核对。`;
+}
+
 export async function confirmDelete(entry) {
   const {Popup,POPUP_TYPE}=await import('/scripts/popup.js');
   const content=document.createElement('div'),description=document.createElement('p');
   description.textContent=entry.kind==='character'?`删除角色「${entry.name}」？此操作无法撤销。`:`永久删除聊天「${entry.name}」？此操作无法撤销。`;
   content.append(description);
   const checkbox=document.createElement('input');checkbox.type='checkbox';
+  const bookCheck=document.createElement('input');bookCheck.type='checkbox';
+  let book='';
   if(entry.kind==='character'){
+    book=primaryBook(await readCard(entry.avatar));
+    if(book){
+      const worlds=await import('/scripts/world-info.js');
+      if(!Array.isArray(worlds.world_names))await worlds.updateWorldInfoList();
+      if(worlds.world_names.includes(book)){
+        const shared=bookInUse(book,entry.avatar,worlds,context());
+        bookCheck.disabled=Boolean(shared);
+        bookCheck.checked=!shared;
+        const row=document.createElement('label');row.className='checkbox_label';
+        row.append(bookCheck,document.createTextNode(shared
+          ? `保留主世界书「${book}」（已有其他绑定或已全局启用）`
+          : `同时删除绑定的主世界书「${book}」`));
+        content.append(row);
+        if(!shared){
+          const note=document.createElement('p');
+          note.textContent='勾选后将删除独立的世界书文件，其他聊天对这本书的引用也会失效。';
+          content.append(note);
+        }
+      }
+    }
     const label=document.createElement('label');label.className='checkbox_label';
     label.append(checkbox,document.createTextNode('同时删除这个角色的全部聊天（包括已归档聊天）'));content.append(label);
     const note=document.createElement('p');note.textContent='默认保留聊天文件；重新导入同一头像文件名的角色卡后可找回。只想收起角色时，请使用归档。';content.append(note);
   }
   const heading=document.createElement('h3');heading.textContent='确认删除';content.prepend(heading);
   const confirmed=await new Popup(content,POPUP_TYPE.CONFIRM,'',{okButton:'删除',cancelButton:'取消'}).show();
-  return confirmed?{deleteChats:checkbox.checked}:null;
+  return confirmed?{deleteChats:checkbox.checked,book,deleteBook:bookCheck.checked}:null;
 }
 export async function removeEntry(entry, options, token) {
   const native=await import('/script.js');
@@ -68,10 +151,7 @@ export async function removeEntry(entry, options, token) {
   assertSelection(token);
   if(native.isGenerating?.())throw new Error('请先结束生成，再执行删除。');
   if(entry.kind==='character'){
-    if(typeof native.deleteCharacter!=='function')throw new Error('此宿主不支持快捷删除角色，请使用原生角色管理。');
-    if(!context().characters.some(c=>c.avatar===entry.avatar))throw new Error('这个角色已不存在。');
-    if(!await native.deleteCharacter(entry.avatar,options))throw new Error('角色未删除，已保留侧栏状态。');
-    return;
+    return removeCharacter(entry,options,token,native);
   }
   if(entry.kind!=='chat')throw new Error('请在原生群聊管理中删除群聊。');
   const ctx=context(),isGroup=entry.groupId!=null;

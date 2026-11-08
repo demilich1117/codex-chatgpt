@@ -1,3 +1,18 @@
+/* The host toggles #mes_stop between none and flex. Center its child glyph in both themes. */
+.cg-active #send_form #mes_stop {
+  box-sizing: border-box; width: 44px; height: 44px; flex: 0 0 44px;
+  align-items: center; justify-content: center; padding: 0; margin: 0;
+  color: var(--cg-surface-page); background: var(--cg-text-primary);
+  border-radius: 50%; opacity: 1; line-height: 1;
+}
+.cg-active #send_form #mes_stop i {
+  display: grid; place-items: center; width: 100%; height: 100%; line-height: 1;
+}
+/* A single square in the circular button, using the existing clickable host node. */
+.cg-active #send_form #mes_stop i.fa-circle-stop::before {
+  content: ''; width: 15px; height: 15px; border-radius: 3px; background-color: currentColor;
+}
+.cg-active #send_form #mes_stop:hover { box-shadow: 0 0 0 3px var(--cg-edge); }
 /* Native toolbars keep their handlers; each message owns an in-flow footer. */
 .cg-active #chat .cg-message-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:4px; order:6; width:100%; min-width:0; margin-top:8px; color:var(--cg-text-muted); }
 .cg-active #chat .mes[is_user='true'] .cg-message-actions { justify-content:flex-end; }

@@ -1,0 +1,90 @@
+/* Keep native fields, forms and delegated listeners in their original parents. */
+.cg-active .cg-drawer-pages,
+.cg-active .cg-extension-directory {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 16px;
+  font: 14px/1.4 var(--cg-font);
+}
+.cg-active .cg-drawer-pages {
+  padding: 4px;
+  background: var(--cg-surface-input);
+  border: 1px solid var(--cg-seam);
+  border-radius: 12px;
+}
+.cg-active :is(.cg-drawer-pages, .cg-extension-directory) button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cg-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.cg-active :is(.cg-drawer-pages, .cg-extension-directory) button:hover {
+  color: var(--cg-text-primary);
+  background-color: var(--cg-button-hover);
+}
+.cg-active :is(.cg-drawer-pages, .cg-extension-directory) button[aria-pressed='true'] {
+  background: var(--cg-surface-raised);
+  color: var(--cg-text-primary);
+  box-shadow: 0 0 0 1px var(--cg-edge), 0 1px 3px var(--cg-shadow-color);
+}
+.cg-active #top-settings-holder .cg-category-hidden,
+.cg-active .cg-extension-index :is(#extensions_settings, #extensions_settings2),
+.cg-active .cg-extension-detail :is(#extensions_settings, #extensions_settings2):not(:has(> :not(.cg-category-hidden, :empty))),
+.cg-active #PersonaManagement.cg-categorized .persona_management_right_column:not(:has(> :not(.cg-category-hidden))),
+.cg-active :is(.cg-extension-directory, .cg-drawer-pages) [hidden] { display: none !important; }
+.cg-active .cg-categorized :is(#user-settings-block-content, #persona-management-block) {
+  display: block;
+}
+.cg-active #AdvancedFormatting.cg-categorized > .spaceEvenly { display: block; }
+.cg-active .cg-categorized :is(#UI-Customization, #UI-Theme-Block, #power-user-options-block, #ContextSettings, #InstructSettingsColumn, #SystemPromptColumn) {
+  width: 100%; min-width: 0;
+}
+.cg-active .cg-categorized > .scrollableInner { height: auto; }
+.cg-active #user-settings-block.cg-categorized #UI-Theme-Block > div + div > div:has(> .checkbox_label) {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  column-gap: 18px;
+}
+.cg-active #user-settings-block.cg-categorized #UI-Theme-Block .checkbox_label {
+  min-height: 40px; gap: 10px; margin: 0; padding: 4px 8px;
+  border-bottom: 1px solid var(--cg-seam); cursor: pointer;
+}
+.cg-active #user-settings-block.cg-categorized #UI-Theme-Block .checkbox_label:hover {
+  background-color: var(--cg-surface-hover);
+}
+.cg-active #user-settings-block.cg-categorized #UI-Theme-Block .flex-container:has(> :is(#avatar_style, #chat_display, #media_display, #toastr_position)) {
+  align-items: center; justify-content: space-between; min-height: 44px; gap: 10px; border-bottom: 1px solid var(--cg-seam);
+}
+.cg-active #user-settings-block.cg-categorized :is(#avatar_style, #chat_display, #media_display, #toastr_position) {
+  flex: 0 1 58%; min-width: 0; min-height: 32px;
+}
+.cg-active :is(.cg-extension-index, .cg-extension-detail) .extensions_block > :is(#extensions_settings2 + hr, div:has(#extensions_autoconnect), div:has(> #extensions_url)) { display: none; }
+.cg-active .cg-extension-directory { flex: 1 0 100%; min-width: 0; gap: 8px; }
+.cg-active .cg-extension-directory > input {
+  flex: 1 1 140px; min-width: 0; margin: 0; padding: 8px 12px;
+  color: var(--cg-text-primary); background: var(--cg-control-bg);
+  border: 1px solid var(--cg-edge); border-radius: 8px; font: inherit;
+}
+.cg-active .cg-extension-list {
+  flex: 1 0 100%;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 4px 12px;
+}
+.cg-active .cg-extension-list button {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 44px; text-align: start; color: var(--cg-text-primary);
+  border-bottom: 1px solid var(--cg-seam); overflow-wrap: anywhere;
+}
+.cg-active .cg-extension-list button::after { content: '›'; color: var(--cg-text-muted); }
+.cg-active .cg-extension-directory p { width: 100%; color: var(--cg-text-muted); }
+.cg-active .cg-extension-detail :is(#extensions_settings, #extensions_settings2) { min-width: 0; width: 100%; flex-basis: 100%; }
+@container (max-width: 620px) {
+  .cg-active #user-settings-block.cg-categorized #UI-Theme-Block .checkbox_label { min-height: 44px; }
+  .cg-active :is(.cg-drawer-pages, .cg-extension-directory) button { min-height: 44px; }
+  .cg-active .cg-drawer-pages button { padding-inline: 9px; }
+}

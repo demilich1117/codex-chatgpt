@@ -1,4 +1,15 @@
 // Chat filenames are only unique within their owner. JSON tuples avoid delimiter collisions.
+export const primaryBook = character => character?.data?.extensions?.world || '';
+
+export function bookInUse(book, avatar, worlds, ctx) {
+  const prefs = ctx.powerUserSettings;
+  return Boolean(book) && (ctx.characters.some(card => card.avatar !== avatar && primaryBook(card) === book)
+    || Boolean(worlds.world_info?.charLore?.some(link => link.extraBooks?.includes(book)))
+    || Boolean(worlds.selected_world_info?.includes(book))
+    || ctx.chatMetadata?.world_info === book || prefs?.persona_description_lorebook === book
+    || Object.values(prefs?.persona_descriptions || {}).some(persona => persona?.lorebook === book));
+}
+
 export const chatKey = (owner, name) => `chat:${JSON.stringify([owner, name.replace(/\.jsonl$/i, '')])}`;
 export function chatRef(key) {
   if (!key.startsWith('chat:')) return null;

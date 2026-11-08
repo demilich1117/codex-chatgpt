@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import {normalize} from '../source/extension/model.js';
-import {chatKey,chatRef,setFlag,forgetEntry,renameEntry} from '../source/extension/sidebar-state.js';
+import {chatKey,chatRef,setFlag,forgetEntry,renameEntry,bookInUse,primaryBook} from '../source/extension/sidebar-state.js';
+const target = {avatar:'a.png',data:{extensions:{world:'Book'}}};
+const ctx = {characters:[target]};
+assert.equal(primaryBook({name:'Book',data:{character_book:{name:'Book'}}}), '');
+assert.equal(bookInUse('Book','a.png',{},ctx),false);
+assert.equal(bookInUse('Book','a.png',{}, {characters:[target,{...target,avatar:'b.png'}]}),true);
+assert.equal(bookInUse('Book','a.png',{world_info:{charLore:[{extraBooks:['Book']}]}},ctx),true);
+assert.equal(bookInUse('Book','a.png',{selected_world_info:['Book']},ctx),true);
+assert.equal(bookInUse('Book','a.png',{}, {...ctx,chatMetadata:{world_info:'Book'}}),true);
+assert.equal(bookInUse('Book','a.png',{}, {...ctx,powerUserSettings:{persona_descriptions:{test:{lorebook:'Book'}}}}),true);
 const settings=normalize({pinned:['character:a.png'],collapsedSections:{history:true},futureField:7});
 assert.equal(settings.futureField,7);assert.equal(settings.collapsedSections.history,true);
 assert.deepEqual(settings.archived,[]);
