@@ -2,13 +2,18 @@ export const KEY = 'codex_chatgpt_theme';
 export const SECTION_DEFAULTS = Object.freeze({pinned:false, characters:true, history:false, pinnedHistory:false, archived:true, archivedHistory:true, functions:true});
 export const SIDEBAR_PREVIEW_LIMIT = 5;
 export const DEFAULTS = Object.freeze({enabled:true, mode:'dark', accent:'#0169cc', sidebarWidth:280, panelWidth:760, sidebarCollapsed:false, showIdentity:false, pinned:[], archived:[], collapsedSections:SECTION_DEFAULTS});
-export const PANELS = Object.freeze([
-  ['ai-config-button','回复配置','sliders'], ['sys-settings-button','API 连接','plug'],
-  ['advanced-formatting-button','回复格式','text'], ['WI-SP-button','世界书','book'],
-  ['user-settings-button','用户设置','settings'], ['backgrounds-button','背景','image'],
-  ['extensions-settings-button','扩展','grid'], ['persona-management-button','用户角色','user'],
-  ['rightNavHolder','角色管理','users'],
+export const PANEL_GROUPS = Object.freeze([
+  ['角色与资料', [
+    ['rightNavHolder','角色管理','users'], ['persona-management-button','用户角色','user'],
+    ['WI-SP-button','世界书','book'], ['backgrounds-button','背景','image'],
+  ]],
+  ['模型与设置', [
+    ['ai-config-button','回复配置','sliders'], ['sys-settings-button','API 连接','plug'],
+    ['advanced-formatting-button','回复格式','text'], ['extensions-settings-button','扩展','grid'],
+    ['user-settings-button','用户设置','settings'],
+  ]],
 ]);
+export const PANELS = Object.freeze(PANEL_GROUPS.flatMap(([, panels]) => panels));
 export function normalize(raw = {}) {
   return {...DEFAULTS,...raw, enabled:raw.enabled !== false,
     mode:['light','dark','system'].includes(raw.mode) ? raw.mode : 'dark',

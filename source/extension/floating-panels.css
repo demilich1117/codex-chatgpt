@@ -51,3 +51,39 @@
     resize: both; overflow: auto; width: min(420px, 90dvw);
   }
 }
+
+/* The host appends this window directly to body. Its default bottom-left
+   placement is underneath the desktop conversation sidebar. */
+body.cg-active > #qr--popout {
+  position: fixed; z-index: 60; box-sizing: border-box;
+  left: calc(var(--cg-nav-space) + 12px);
+  top: calc(var(--topBarBlockSize) + var(--tt-inset-top, env(safe-area-inset-top, 0px)) + 8px);
+  bottom: auto;
+  width: min(360px, calc(100vw - var(--cg-nav-space) - 24px)); height: auto;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - var(--topBarBlockSize) - var(--tt-inset-top, 0px) - var(--tt-inset-bottom, 0px) - 24px);
+  min-height: 0; padding: 8px 12px 12px;
+  color: var(--cg-text-primary); background: var(--cg-surface-raised);
+  border: 1px solid var(--cg-edge); border-radius: 12px; box-shadow: var(--cg-shadow-panel);
+}
+.cg-active #qr--popout > .qr--header { position: relative; height: 36px; }
+.cg-active #qr--popout > .qr--header::before { content: '快捷回复'; display: inline-flex; align-items: center; height: 100%; font-weight: 600; }
+.cg-active #qr--popout .qr--controls { top: 0; right: 0; align-items: center; height: 100%; }
+.cg-active #qr--popout > .qr--header > .qr--controls > .qr--close {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; cursor: pointer; color: var(--cg-text-secondary);
+}
+.cg-active #qr--popout > .qr--body { min-height: 0; }
+.cg-active #qr--popout > .qr--body > .qr--buttons { justify-content: flex-start; }
+.cg-active #send_form > .cg-qr-dock {
+  order: 1; margin-inline-start: auto; padding: 4px 10px; min-height: 32px; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--cg-text-secondary); background: var(--cg-surface-hover);
+  border: 1px solid var(--cg-seam); border-radius: 8px;
+}
+.cg-active #send_form > .cg-qr-dock[hidden] { display: none; }
+@media (max-width: 1000px) {
+  .cg-active #qr--bar.popoutVisible { padding-right: 44px; min-height: 44px; }
+  .cg-active #qr--bar > #qr--popoutTrigger { display: inline-grid; place-items: center; width: 44px; height: 44px; top: 0; right: 0; margin: 0; }
+  .cg-active #qr--popout > .qr--header, .cg-active #qr--popout > .qr--header > .qr--controls > .qr--close { height: 44px; }
+  .cg-active #qr--popout > .qr--header > .qr--controls > .qr--close { width: 44px; }
+  .cg-active #send_form > .cg-qr-dock { min-height: 44px; }
+}

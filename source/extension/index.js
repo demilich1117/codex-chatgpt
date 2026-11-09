@@ -1,4 +1,4 @@
-import {KEY,DEFAULTS,PANELS,SIDEBAR_PREVIEW_LIMIT,normalize,foreground,currentIdentity,recentChats} from './model.js';
+import {KEY,DEFAULTS,PANELS,PANEL_GROUPS,SIDEBAR_PREVIEW_LIMIT,normalize,foreground,currentIdentity,recentChats} from './model.js';
 import {context,pastChats,openCharacter,openChat,openGroup,busy,clickNative,assertIdle,selectionToken,assertSelection,confirmDelete,removeEntry} from './host.js';
 import {chatKey,setFlag,forgetEntry,renameEntry} from './sidebar-state.js';
 import {icon} from './icons.js';
@@ -7,6 +7,7 @@ import {currentThemeMatches,watchTheme} from './theme.js';
 import {mountPanelResize} from './panel-resize.js';
 import {bindWidthGrip} from './width-grip.js';
 import {mountFloatingResize} from './floating-panels.js';
+import {mountQuickReplies} from './quick-replies.js';
 import {mountMessageControls} from './message-controls.js';
 import {mountWorldInfo} from './world-info.js';
 import {mountDrawerPages} from './drawer-pages.js';
@@ -43,16 +44,22 @@ function setSidebar(open,focus=true){
  closeActions(false);
  if(mobileQuery.matches){document.body.classList.toggle('cg-nav-open',open);sidebar.inert=!open;$('#sheld').inert=open;}
  else {settings.sidebarCollapsed=!open;save();setAppearance();sidebar.inert=!open;}
- $('[data-cg-menu]')?.setAttribute('aria-expanded',String(open));
- if(open&&focus)(mobileQuery.matches?sidebar.querySelector('button'):search).focus();else if(!open&&focus)$('[data-cg-menu]')?.focus();
+ syncSidebarToggles();
+ if(open&&focus)(mobileQuery.matches?sidebar.querySelector('button'):search).focus();
+ else if(focus)focusSidebarToggle();
 }
+function syncSidebarToggles(){
+ $('[data-cg-rail-toggle]')?.setAttribute('aria-expanded',String(!settings.sidebarCollapsed));
+ $('[data-cg-menu]')?.setAttribute('aria-expanded',String(document.body.classList.contains('cg-nav-open')));
+}
+function focusSidebarToggle(){$(mobileQuery.matches?'[data-cg-menu]':'[data-cg-rail-toggle]')?.focus();}
 function closeNative(){
  for(const [id] of PANELS){const p=$(`#${id} > .drawer-content`);if(p?.classList.contains('openDrawer'))clickNative(`#${id} > .drawer-toggle`);}
 }
 function openPanel(id,trigger){
  const panel=$('#'+id+' > .drawer-content');
  if(!panel)throw new Error('原生面板在此宿主中不可用。');
- appearance.hidden=true;panelReturn=trigger||document.activeElement;
+ setAppearanceVisible(false);panelReturn=trigger||document.activeElement;
  // Test the requested drawer before closing others: a second click is a close.
  if(panel.classList.contains('openDrawer')){closePanel();return;}
  closeNative();
@@ -60,9 +67,16 @@ function openPanel(id,trigger){
  clickNative(`#${id} > .drawer-toggle`);
  requestAnimationFrame(()=>panel.querySelector('.cg-panel-header button')?.focus());
 }
-function returnFocus(){if(mobileQuery.matches&&sidebar.contains(panelReturn))setSidebar(true,false);if(panelReturn?.getClientRects().length&&!panelReturn.closest('[hidden]'))panelReturn.focus();else $('[data-cg-menu]')?.focus();}
+function returnFocus(){
+ if(mobileQuery.matches&&sidebar.contains(panelReturn)){
+  setSidebar(true,false);
+  const section=panelReturn.closest('details');if(section)section.open=true;
+ }
+ if(panelReturn?.getClientRects().length&&!panelReturn.closest('[hidden],[inert]'))panelReturn.focus();else focusSidebarToggle();
+}
 function closePanel(){closeNative();document.body.classList.remove('cg-panel-open');returnFocus();}
-function closeAppearance(){appearance.hidden=true;returnFocus();}
+function setAppearanceVisible(open){appearance.hidden=!open;$('[data-cg-appearance]')?.setAttribute('aria-expanded',String(open));}
+function closeAppearance(){setAppearanceVisible(false);returnFocus();}
 function navigate(fn){
  if(deleting)throw new Error('正在处理删除，请稍候。');
  closeActions(false);
@@ -109,7 +123,11 @@ function buildAppearance(){
  function refresh(){for(const b of modes.children)b.setAttribute('aria-pressed',String(b.dataset.mode===settings.mode));for(const b of swatches.children)b.setAttribute('aria-pressed',String(b.dataset.color===settings.accent));picker.value=settings.accent;}
  refresh();
 }
-function showAppearance(e){panelReturn=e?.currentTarget||document.activeElement;closeNative();if(mobileQuery.matches)setSidebar(false,false);appearance.hidden=false;appearance.querySelector('button').focus();}
+function showAppearance(e){
+ if(!appearance.hidden){closeAppearance();return;}
+ panelReturn=e?.currentTarget||document.activeElement;closeNative();if(mobileQuery.matches)setSidebar(false,false);
+ setAppearanceVisible(true);appearance.querySelector('button').focus();
+}
 function panelButton(label,glyph,id,cls='cg-button'){
  const b=button(label,glyph,e=>openPanel(id,e.currentTarget),cls);
  // ST closes drawers on html mousedown/touchstart before click. These proxies
@@ -117,6 +135,29 @@ function panelButton(label,glyph,id,cls='cg-button'){
  for(const event of ['mousedown','touchstart'])listen(b,event,e=>e.stopPropagation());
  b.dataset.cgPanel=id;b.setAttribute('aria-expanded',String($('#'+id+' > .drawer-content')?.classList.contains('openDrawer')||false));
  return b;
+}
+function buildMenuNavigation(rail,mobileSection){
+ const menus=node('div','cg-navigation-items');
+ const history=button('历史聊天','history',()=>openNativeAction('#option_select_chat'));
+ for(const [label,panels] of PANEL_GROUPS){
+  const group=node('div','cg-navigation-group');
+  group.setAttribute('role','group');group.setAttribute('aria-label',label);
+  if(!menus.childElementCount)group.append(history);
+  for(const [id,name,glyph] of panels){
+   const panel=$('#'+id+' > .drawer-content');if(!panel)continue;
+   const control=panelButton(name,glyph,id);
+   if(panel.id)control.setAttribute('aria-controls',panel.id);
+   group.append(control);
+  }
+  menus.append(group);
+ }
+ const looks=button('外观','sun',showAppearance);
+ looks.dataset.cgAppearance='';looks.setAttribute('aria-controls','cg-appearance');looks.setAttribute('aria-expanded','false');
+ return ()=>{
+  mobileSection.hidden=!mobileQuery.matches;
+  const host=mobileQuery.matches?mobileSection:rail;
+  host.append(menus,looks);
+ };
 }
 function section(key,label,count){
  const details=node('details','cg-nav-section');details.dataset.cgSection=key;
@@ -261,18 +302,18 @@ function mount(){
  document.body.classList.add('cg-active');setAppearance();
  for(const file of ['sidebar.css','messages.css','world-info.css','drawers.css','floating-panels.css']){const styles=node('link');styles.rel='stylesheet';styles.href=new URL('./'+file,import.meta.url).href;document.head.append(styles);roots.push(styles);}
  const rail=node('nav','cg-rail');rail.setAttribute('aria-label','快捷导航');
- rail.append(button('展开或收起侧栏','panel',()=>setSidebar(settings.sidebarCollapsed),'cg-icon'),panelButton('角色与群聊','users','rightNavHolder','cg-icon'),button('历史聊天','history',()=>openNativeAction('#option_select_chat'),'cg-icon'),panelButton('扩展','grid','extensions-settings-button','cg-icon'),button('外观','settings',showAppearance,'cg-icon'));
+ const railToggle=button('展开或收起侧栏','panel',()=>setSidebar(settings.sidebarCollapsed),'cg-icon');
+ railToggle.dataset.cgRailToggle='';railToggle.setAttribute('aria-controls','cg-sidebar');rail.append(railToggle);
  sidebar=node('aside','cg-sidebar');sidebar.id='cg-sidebar';sidebar.setAttribute('aria-label','侧栏');
  const top=node('div','cg-sidebar-heading');top.append(node('strong','cg-brand','Codex'),button('收起侧栏','panel',()=>setSidebar(false),'cg-icon'));sidebar.append(top);
  const searchLabel=node('label','cg-search');searchLabel.append(icon('search'));search=node('input');search.type='search';search.placeholder='搜索角色与当前聊天';search.setAttribute('aria-label','搜索角色与当前聊天');searchLabel.append(search);sidebar.append(searchLabel);
  const scroll=node('div','cg-sidebar-scroll');
  listen(scroll,'scroll',()=>closeActions(false));listen(window,'resize',()=>closeActions(false));
  listen(document,'pointerdown',event=>{if(actionMenu&&!actionMenu.contains(event.target)&&!actionTrigger?.contains(event.target))closeActions(false);});
- scroll.append(panelButton('角色与群聊','users','rightNavHolder'),button('管理当前聊天','history',()=>openNativeAction('#option_select_chat')));
  navBody=node('div');scroll.append(navBody);historyList=node('div','cg-history');scroll.append(historyList);
  const functions=section('functions','酒馆功能');functions.classList.add('cg-functions');
- for(const [id,label,glyph]of PANELS)functions.append(panelButton(label,glyph,id));scroll.append(functions);sidebar.append(scroll);
- const footer=node('div','cg-sidebar-footer');footer.append(button('新对话','compose',()=>navigate(()=>openNativeAction('#option_start_new_chat')),'cg-new-chat'),button('外观','settings',showAppearance,'cg-icon'));sidebar.append(footer);
+ const placeMenus=buildMenuNavigation(rail,functions);scroll.append(functions);sidebar.append(scroll);
+ const footer=node('div','cg-sidebar-footer');footer.append(button('新对话','compose',()=>navigate(()=>openNativeAction('#option_start_new_chat')),'cg-new-chat'));sidebar.append(footer);
  const grip=node('div','cg-resize');grip.tabIndex=0;grip.setAttribute('role','separator');grip.setAttribute('aria-orientation','vertical');grip.setAttribute('aria-label','侧栏宽度');
  const commitSidebarWidth=width=>{settings.sidebarWidth=normalize({sidebarWidth:width}).sidebarWidth;setAppearance();save();};
  bindWidthGrip(grip,{range:()=>({width:sidebar.getBoundingClientRect().width,min:230,max:420}),direction:1,commit:commitSidebarWidth},controller.signal);
@@ -280,9 +321,14 @@ function mount(){
  header=node('header','cg-header');const menu=button('打开侧栏','menu',()=>setSidebar(!document.body.classList.contains('cg-nav-open')),'cg-icon');menu.dataset.cgMenu='';menu.setAttribute('aria-controls','cg-sidebar');menu.setAttribute('aria-expanded','false');title=node('strong','cg-chat-title','新对话');header.append(menu,title,button('会话操作','more',()=>clickNative('#options_button'),'cg-icon'));
  const shade=button('关闭侧栏',null,()=>setSidebar(false),'cg-dismiss');shade.tabIndex=-1;
  document.body.append(rail,sidebar,header,shade);roots.push(rail,sidebar,header,shade);
- buildPanels();buildAppearance();subscriptions.push(mountMessageControls(context),mountActivity(context),mountWorldInfo(),mountDrawerPages(),mountFloatingResize());
+ buildPanels();buildAppearance();subscriptions.push(mountMessageControls(context),mountActivity(context),mountWorldInfo(),mountDrawerPages(),mountFloatingResize(),mountQuickReplies());
  listen(search,'input',()=>{renderNavigation();renderHistory();});listen(modeQuery,'change',setAppearance);
- const resize=()=>{document.body.classList.remove('cg-nav-open');$('#sheld').inert=false;sidebar.inert=mobileQuery.matches||settings.sidebarCollapsed;$('.cg-brand').textContent=mobileQuery.matches?'ChatGPT':'Codex';};listen(mobileQuery,'change',resize);resize();
+ const resize=()=>{
+  const focused=document.activeElement, wasMenu=focused?.closest('.cg-rail,.cg-functions');
+  document.body.classList.remove('cg-nav-open');$('#sheld').inert=false;sidebar.inert=mobileQuery.matches||settings.sidebarCollapsed;
+  placeMenus();syncSidebarToggles();$('.cg-brand').textContent=mobileQuery.matches?'ChatGPT':'Codex';
+  if(wasMenu){if(!mobileQuery.matches&&rail.contains(focused))focused.focus();else focusSidebarToggle();}
+ };listen(mobileQuery,'change',resize);resize();
  listen(document,'keydown',e=>{
   // A native popup owns its Escape/Tab; do not also close the drawer beneath it.
   if(e.target.closest?.('dialog,.select2-container')||document.querySelector('dialog[open],.select2-container--open'))return;

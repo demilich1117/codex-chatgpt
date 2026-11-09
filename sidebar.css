@@ -1,4 +1,21 @@
 /* Extension-owned controls also work with already-saved 0.1.x native themes. */
+.cg-active .cg-functions[hidden] { display: none; }
+.cg-active .cg-navigation-group + .cg-navigation-group { border-top: 1px solid var(--cg-seam); margin-top: 6px; padding-top: 6px; }
+@media (min-width: 1001px) {
+  .cg-active .cg-rail { z-index: 36; gap: 6px; }
+  .cg-active .cg-rail > :first-child { color: var(--cg-text-secondary); }
+  .cg-active .cg-navigation-items { flex: 1; min-height: 0; width: 100%; overflow-y: auto; scrollbar-width: none; }
+  .cg-active .cg-navigation-items::-webkit-scrollbar { display: none; }
+  .cg-active .cg-rail .cg-navigation-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .cg-active .cg-rail .cg-navigation-group + .cg-navigation-group { border: 0; margin-top: 5px; padding-top: 0; }
+  .cg-active .cg-rail .cg-navigation-group + .cg-navigation-group::before { content: ''; width: 20px; height: 1px; margin: 4px 0; background: var(--cg-seam); }
+  .cg-active .cg-rail .cg-button { flex: none; justify-content: center; width: 36px; height: 36px; min-height: 36px; padding: 0; color: var(--cg-text-muted); }
+  .cg-active .cg-rail .cg-button span { display: none; }
+  .cg-active .cg-rail .cg-button:is(:hover,:focus-visible,[aria-expanded='true']) { color: var(--cg-text-primary); }
+  .cg-active .cg-rail .cg-button[aria-expanded='true'] { background: var(--cg-surface-raised); box-shadow: inset 2px 0 var(--cg-accent), inset 0 0 0 1px var(--cg-seam); }
+  .cg-active .cg-rail button:focus-visible { outline: 2px solid var(--cg-accent); outline-offset: -2px; }
+  .cg-active .cg-sidebar-heading > button { display: none; }
+}
 .cg-active :is(.cg-row-actions,.cg-quick-action) { width: 28px; height: 32px; flex: 0 0 auto; opacity: 0; }
 .cg-active :is(.cg-row-actions,.cg-quick-action) svg { width: 16px; height: 16px; }
 .cg-active .cg-nav-row:is(:hover,:focus-within) :is(.cg-row-actions,.cg-quick-action),
