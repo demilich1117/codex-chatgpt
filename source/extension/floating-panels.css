@@ -4,6 +4,17 @@
   --cg-grip-edge: 12px;
   --cg-grip-corner: 18px;
 }
+.cg-active .dialog-resizing > .TH-custom-tailwind[role='dialog'] > .cg-held-content {
+  flex: none;
+  align-self: flex-start;
+  box-sizing: border-box;
+  width: var(--cg-held-width);
+  height: var(--cg-held-height);
+}
+.cg-active .dialog-resizing:has(> .TH-custom-tailwind > .cg-held-content) {
+  outline: 1px solid var(--cg-accent);
+  outline-offset: -1px;
+}
 .cg-active .dialog-teleported.dialog-resizable:has(> .TH-custom-tailwind[role='dialog']) > .absolute[class*='-resize'] {
   position: absolute;
   pointer-events: auto;
@@ -11,6 +22,10 @@
 }
 .cg-active .dialog-teleported.dialog-resizable > .cursor-ew-resize { width: var(--cg-grip-edge); cursor: ew-resize; }
 .cg-active .dialog-teleported.dialog-resizable > .cursor-ns-resize { height: var(--cg-grip-edge); cursor: ns-resize; }
+/* Keep the middle of the short title bar available for moving the window. */
+.cg-active .dialog-teleported.dialog-resizable > .top-0:is(.cursor-ns-resize, .cursor-ne-resize, .cursor-nw-resize) {
+  transform: translateY(-50%);
+}
 .cg-active .dialog-teleported.dialog-resizable > :is(.cursor-ne-resize, .cursor-nw-resize) {
   width: var(--cg-grip-corner); height: var(--cg-grip-corner); z-index: 21;
 }

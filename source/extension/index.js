@@ -5,6 +5,8 @@ import {icon} from './icons.js';
 import {mountActivity} from './activity.js';
 import {currentThemeMatches,watchTheme} from './theme.js';
 import {mountPanelResize} from './panel-resize.js';
+import {bindWidthGrip} from './width-grip.js';
+import {mountFloatingResize} from './floating-panels.js';
 import {mountMessageControls} from './message-controls.js';
 import {mountWorldInfo} from './world-info.js';
 import {mountDrawerPages} from './drawer-pages.js';
@@ -12,7 +14,10 @@ import {mountDrawerPages} from './drawer-pages.js';
 let settings, controller, observer, roots=[], subscriptions=[], modeQuery, mobileQuery;
 let historyGeneration=0, sidebar, header, search, navBody, historyList, title, appearance, panelReturn=null;
 const expandedLists=new Set();
-let historyIdentity='', actionMenu=null, actionTrigger=null, deleting=false;
+const SEARCH_PREVIEW_LIMIT=25;
+const HISTORY_CACHE_MS=30000;
+let historyReadAt=0;
+let historyIdentity='', historyRequest=null, actionMenu=null, actionTrigger=null, deleting=false;
 let lifecycle, settingsRoot, themeStatus, stopWatchingTheme, extensionEnabled=true;
 let panelResize;
 const $=s=>document.querySelector(s);
@@ -128,12 +133,13 @@ function section(key,label,count){
  return details;
 }
 function appendLimited(parent,key,items,render){
- const limit=search.value.trim()?items.length:SIDEBAR_PREVIEW_LIMIT;
+ const limit=search.value.trim()?SEARCH_PREVIEW_LIMIT:SIDEBAR_PREVIEW_LIMIT;
  items.slice(0,limit).forEach(item=>parent.append(render(item)));
  if(items.length<=limit)return;
  const extra=node('div','cg-section-extra');extra.id='cg-extra-'+key;extra.hidden=!expandedLists.has(key);
- items.slice(limit).forEach(item=>extra.append(render(item)));
- const more=button('',null,()=>{extra.hidden=!extra.hidden;if(extra.hidden)expandedLists.delete(key);else expandedLists.add(key);update();});
+ function populate(){if(!extra.childElementCount)items.slice(limit).forEach(item=>extra.append(render(item)));}
+ if(!extra.hidden)populate();
+ const more=button('',null,()=>{extra.hidden=!extra.hidden;if(!extra.hidden)populate();if(extra.hidden)expandedLists.delete(key);else expandedLists.add(key);update();});
  more.classList.add('cg-section-more');more.dataset.cgMore=key;more.setAttribute('aria-controls',extra.id);
  function update(){const label=extra.hidden?'显示全部（'+items.length+'）':'收起更多';more.textContent=label;more.title=label;more.setAttribute('aria-label',label);more.setAttribute('aria-expanded',String(!extra.hidden));}
  update();parent.append(extra,more);
@@ -155,7 +161,7 @@ async function deleteFromSidebar(entry){
   assertSelection(token);const warning=await removeEntry(entry,options,token);
   forgetEntry(settings,entry.key,entry.kind==='character'&&options.deleteChats);save();
   if(warning) report(new Error(warning));
- }finally{deleting=false;if(!signal.aborted){await refreshEntries();search.focus();}}
+ }finally{deleting=false;if(!signal.aborted){historyRequest=null;await refreshEntries();search.focus();}}
 }
 function showActions(entry,trigger){
  if(actionTrigger===trigger){closeActions();return;}
@@ -219,13 +225,17 @@ function renderNavigation(){
 }
 async function renderHistory(){
  const generation=++historyGeneration,identity=currentIdentity(context());
- if(identity!==historyIdentity){for(const key of ['history','pinnedHistory','archivedHistory'])expandedLists.delete(key);historyIdentity=identity;}
+ if(identity!==historyIdentity){for(const key of ['history','pinnedHistory','archivedHistory'])expandedLists.delete(key);historyIdentity=identity;historyRequest=null;}
  closeActions(false);
- const group=section('history','最近聊天');
- group.title='当前角色或群聊的最近聊天';historyList.replaceChildren(group);
- const loading=node('p','cg-empty','正在读取聊天列表…');group.append(loading);
+ if(!historyRequest || (historyReadAt && Date.now()-historyReadAt>=HISTORY_CACHE_MS)){
+  const group=section('history','最近聊天');group.title='当前角色或群聊的最近聊天';
+  group.append(node('p','cg-empty','正在读取聊天列表…'));historyList.replaceChildren(group);
+  historyReadAt=0;
+  historyRequest=pastChats();
+ }
  try{
-  const chats=await pastChats();if(generation!==historyGeneration||identity!==currentIdentity(context())||!controller)return;
+  const chats=await historyRequest;if(generation!==historyGeneration||identity!==currentIdentity(context())||!controller)return;
+  if(!historyReadAt)historyReadAt=Date.now();
   const ctx=context(),query=search.value.trim().toLocaleLowerCase(),avatar=ctx.characters[ctx.characterId]?.avatar,groupId=ctx.groupId;
   const list=recentChats(chats,ctx.chatId).filter(c=>c.file_name.toLocaleLowerCase().includes(query)).map(chat=>{
    const name=chat.file_name.replace(/\.jsonl$/i,'');return {name,key:chatKey(identity,name),kind:'chat',avatar,groupId,fn:()=>{
@@ -243,7 +253,7 @@ async function renderHistory(){
    if(!items.length)sectionNode.append(node('p','cg-empty',query?'没有匹配的聊天':'暂无未置顶、未归档的聊天。'));
    historyList.append(sectionNode);
   }
- }catch(e){if(generation===historyGeneration&&controller){loading.remove();group.append(button('读取失败，点击重试','history',renderHistory));}console.warn(e);}
+ }catch(e){if(generation===historyGeneration&&controller){historyRequest=null;const group=section('history','最近聊天');group.append(button('读取失败，点击重试','history',renderHistory));historyList.replaceChildren(group);}console.warn(e);}
 }
 function mount(){
  if(controller)return;
@@ -264,11 +274,13 @@ function mount(){
  for(const [id,label,glyph]of PANELS)functions.append(panelButton(label,glyph,id));scroll.append(functions);sidebar.append(scroll);
  const footer=node('div','cg-sidebar-footer');footer.append(button('新对话','compose',()=>navigate(()=>openNativeAction('#option_start_new_chat')),'cg-new-chat'),button('外观','settings',showAppearance,'cg-icon'));sidebar.append(footer);
  const grip=node('div','cg-resize');grip.tabIndex=0;grip.setAttribute('role','separator');grip.setAttribute('aria-orientation','vertical');grip.setAttribute('aria-label','侧栏宽度');
- listen(grip,'pointerdown',e=>{grip.setPointerCapture(e.pointerId);});listen(grip,'pointermove',e=>{if(grip.hasPointerCapture(e.pointerId)){settings.sidebarWidth=normalize({sidebarWidth:e.clientX-48}).sidebarWidth;setAppearance();}});listen(grip,'pointerup',save);listen(grip,'keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();settings.sidebarWidth=normalize({sidebarWidth:settings.sidebarWidth+(e.key==='ArrowRight'?10:-10)}).sidebarWidth;setAppearance();save();}});sidebar.append(grip);
+ const commitSidebarWidth=width=>{settings.sidebarWidth=normalize({sidebarWidth:width}).sidebarWidth;setAppearance();save();};
+ bindWidthGrip(grip,{range:()=>({width:sidebar.getBoundingClientRect().width,min:230,max:420}),direction:1,commit:commitSidebarWidth},controller.signal);
+ listen(grip,'keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();commitSidebarWidth(settings.sidebarWidth+(e.key==='ArrowRight'?10:-10));}});sidebar.append(grip);
  header=node('header','cg-header');const menu=button('打开侧栏','menu',()=>setSidebar(!document.body.classList.contains('cg-nav-open')),'cg-icon');menu.dataset.cgMenu='';menu.setAttribute('aria-controls','cg-sidebar');menu.setAttribute('aria-expanded','false');title=node('strong','cg-chat-title','新对话');header.append(menu,title,button('会话操作','more',()=>clickNative('#options_button'),'cg-icon'));
  const shade=button('关闭侧栏',null,()=>setSidebar(false),'cg-dismiss');shade.tabIndex=-1;
  document.body.append(rail,sidebar,header,shade);roots.push(rail,sidebar,header,shade);
- buildPanels();buildAppearance();subscriptions.push(mountMessageControls(context),mountActivity(context),mountWorldInfo(),mountDrawerPages());
+ buildPanels();buildAppearance();subscriptions.push(mountMessageControls(context),mountActivity(context),mountWorldInfo(),mountDrawerPages(),mountFloatingResize());
  listen(search,'input',()=>{renderNavigation();renderHistory();});listen(modeQuery,'change',setAppearance);
  const resize=()=>{document.body.classList.remove('cg-nav-open');$('#sheld').inert=false;sidebar.inert=mobileQuery.matches||settings.sidebarCollapsed;$('.cg-brand').textContent=mobileQuery.matches?'ChatGPT':'Codex';};listen(mobileQuery,'change',resize);resize();
  listen(document,'keydown',e=>{
@@ -281,16 +293,16 @@ function mount(){
    const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
   }
  });
- const ctx=context(),update=()=>{renderNavigation();renderHistory();};
+ const ctx=context(),update=()=>{historyRequest=null;renderNavigation();renderHistory();};
  const on=(key,fn)=>{const event=ctx.eventTypes[key];if(event){ctx.eventSource.on(event,fn);subscriptions.push(()=>ctx.eventSource.removeListener(event,fn));}};
  on('CHAT_RENAMED',data=>{const owner=data.groupId!=null?'group:'+data.groupId:'character:'+data.avatarId;renameEntry(settings,chatKey(owner,data.oldFileName),chatKey(owner,data.newFileName));save();update();});
  on('CHARACTER_RENAMED',(oldAvatar,newAvatar)=>{renameEntry(settings,'character:'+oldAvatar,'character:'+newAvatar);save();update();});
- for(const key of ['CHAT_CHANGED','CHARACTER_EDITED','CHARACTER_DELETED','GROUP_UPDATED','CHAT_DELETED','GROUP_CHAT_DELETED']){const event=ctx.eventTypes[key];if(event){ctx.eventSource.on(event,update);subscriptions.push(()=>ctx.eventSource.removeListener(event,update));}}
+ for(const key of ['CHAT_CHANGED','CHARACTER_EDITED','CHARACTER_DELETED','GROUP_UPDATED','CHAT_CREATED','GROUP_CHAT_CREATED','CHAT_DELETED','GROUP_CHAT_DELETED'])on(key,update);
  renderNavigation();renderHistory();
 }
 function unmount(){
  if(!controller)return;
- closeActions(false);historyGeneration++;historyIdentity='';expandedLists.clear();controller?.abort();controller=null;observer?.disconnect();observer=null;
+ closeActions(false);historyGeneration++;historyIdentity='';historyRequest=null;expandedLists.clear();controller?.abort();controller=null;observer?.disconnect();observer=null;
  subscriptions.splice(0).forEach(fn=>fn());roots.splice(0).forEach(el=>el.remove());
  for(const el of document.querySelectorAll('.cg-native-panel'))el.classList.remove('cg-native-panel');
  document.body.classList.remove('cg-active','cg-collapsed','cg-nav-open','cg-panel-open','cg-identities','cg-group');
