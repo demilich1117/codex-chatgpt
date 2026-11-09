@@ -35,7 +35,8 @@
 }
 .cg-active #top-settings-holder .cg-category-hidden,
 .cg-active .cg-extension-index :is(#extensions_settings, #extensions_settings2),
-.cg-active .cg-extension-detail :is(#extensions_settings, #extensions_settings2):not(:has(> :not(.cg-category-hidden, :empty))),
+.cg-active .cg-extension-detail :is(#extensions_settings, #extensions_settings2):not(.cg-extension-parent),
+.cg-active .cg-extension-detail .cg-extension-parent > :not(.cg-extension-parent, .cg-extension-current),
 .cg-active #PersonaManagement.cg-categorized .persona_management_right_column:not(:has(> :not(.cg-category-hidden))),
 .cg-active :is(.cg-extension-directory, .cg-drawer-pages) [hidden] { display: none !important; }
 .cg-active .cg-categorized :is(#user-settings-block-content, #persona-management-block) {

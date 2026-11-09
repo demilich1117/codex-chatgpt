@@ -1,3 +1,5 @@
+import {mountExtensionDirectory} from './extension-directory.js';
+
 // Each category reveals the original controls in place, including fields added by providers.
 const layouts = [
   ['#user-settings-block', [
@@ -74,100 +76,6 @@ function mountPages(root, definitions) {
     for (const element of marked) element.classList.remove('cg-category-hidden');
     root.classList.remove('cg-categorized');
     nav.remove();
-  };
-}
-
-function mountExtensionDirectory() {
-  const panel = document.querySelector('#rm_extensions_block');
-  const columns = panel ? [...panel.querySelectorAll('#extensions_settings, #extensions_settings2')] : [];
-  if (!columns.length) return () => {};
-  const tools = document.createElement('div');
-  tools.className = 'cg-extension-directory';
-  const input = document.createElement('input');
-  input.type = 'search';
-  input.placeholder = '搜索扩展设置';
-  input.setAttribute('aria-label', input.placeholder);
-  const list = document.createElement('div');
-  list.className = 'cg-extension-list';
-  const back = button('返回扩展列表', () => {
-    const previous = selected;
-    selected = null; full = false;
-    render();
-    (buttons.get(previous) || input).focus();
-  });
-  const toggle = button('完整设置', () => {
-    full = !full;
-    selected = null;
-    render();
-    if (!full) input.focus();
-  });
-  toggle.setAttribute('aria-label','显示完整扩展设置');
-  tools.append(back, input, toggle, list);
-  columns[0].before(tools);
-  let full = false, selected = null, frame = 0;
-  const buttons = new Map();
-  const marked = new Set();
-  function render() {
-    const items = columns.flatMap(col => [...col.children]).flatMap(el => {
-      const title = el.querySelector('.inline-drawer-header b, .inline-drawer-header, h4, h3');
-      const name = title?.textContent.trim();
-      return name ? [{el, name}] : [];
-    });
-    if (selected && !items.some(item => item.el === selected)) selected = null;
-    const directory = !selected && !full;
-    input.hidden = list.hidden = !directory;
-    back.hidden = !selected;
-    toggle.setAttribute('aria-pressed', String(full));
-    toggle.textContent = full ? '返回分类' : '完整设置';
-    panel.classList.toggle('cg-extension-index', directory);
-    panel.classList.toggle('cg-extension-detail', Boolean(selected));
-    let matches = 0;
-    const query = input.value.trim().toLocaleLowerCase();
-    for (const {el,name} of items) {
-      marked.add(el);
-      el.classList.toggle('cg-category-hidden', Boolean(selected) && el !== selected);
-      let choice = buttons.get(el);
-      if (!choice) {
-        choice = button(name, () => {
-          selected = el;
-          render();
-          const header = el.querySelector('.inline-drawer-toggle');
-          if (header?.querySelector('.inline-drawer-icon.down')) header.click();
-          back.focus();
-        });
-        list.append(choice);
-        buttons.set(el, choice);
-      }
-      if (choice.textContent !== name) choice.textContent = name;
-      choice.hidden = !name.toLocaleLowerCase().includes(query);
-      if (!choice.hidden) matches++;
-    }
-    for (const [el,choice] of buttons) {
-      if (!columns.some(col => el.parentElement === col)) {
-        choice.remove(); buttons.delete(el); marked.delete(el);
-        el.classList.remove('cg-category-hidden');
-      }
-    }
-    empty.hidden = !directory || matches > 0;
-  }
-  const empty = document.createElement('p');
-  empty.textContent = '没有匹配的扩展设置';
-  list.after(empty);
-  input.addEventListener('input',render);
-  // Only index installed settings when the drawer is open. Ignore frequent editor updates.
-  const update = () => {
-    if (!panel.classList.contains('openDrawer') || frame) return;
-    frame = requestAnimationFrame(() => { frame = 0; render(); });
-  };
-  const observer = new MutationObserver(update);
-  for (const col of columns) observer.observe(col, {childList:true,subtree:true});
-  observer.observe(panel, {attributes:true, attributeFilter:['class']});
-  render();
-  return () => {
-    observer.disconnect(); cancelAnimationFrame(frame);
-    for (const item of marked) item.classList.remove('cg-category-hidden');
-    panel.classList.remove('cg-extension-index','cg-extension-detail');
-    tools.remove();
   };
 }
 
