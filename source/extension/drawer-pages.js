@@ -5,15 +5,6 @@ const layouts = [
     ['阅读与输入', '#power-user-options-block'],
     ['角色与杂项', '#UI-Customization'],
   ]],
-  ['#rm_api_block', [
-    ['服务商与模型', ':scope > div:has(#main_api)'],
-    ['连接档案', ':scope > div:has(#connection_profiles)'],
-    ['密钥管理', ':scope > div:has(#viewSecrets)'],
-  ]],
-  ['#left-nav-panel', [
-    ['预设与常用参数', '#respective-presets-block, #common-gen-settings-block'],
-    ['模型参数', '#respective-ranges-and-temps, #advanced-ai-config-block'],
-  ]],
   ['#AdvancedFormatting', [
     ['上下文', '#ContextSettings'],
     ['指令模板', '#InstructSettingsColumn'],
@@ -71,7 +62,7 @@ function mountPages(root, definitions) {
   if (!header || definitions.filter(([,selector]) => root.querySelector(selector)).length < 2) return () => {};
   header.after(nav);
   select(active);
-  // Connection Manager can mount its profile block after this extension.
+  // Keep the chosen category when the host updates a drawer's children.
   const observer = new MutationObserver(() => select(active));
   observer.observe(root, {childList:true});
   const search = root.querySelector('#settingsSearch');
