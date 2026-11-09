@@ -52,17 +52,15 @@
   }
 }
 
-/* The host appends this window directly to body. Its default bottom-left
-   placement is underneath the desktop conversation sidebar. */
+/* Keep the native body-level window above drawers, aligned with the composer.
+   Its bottom edge stays put as reply sets load and the panel grows upwards. */
 body.cg-active > #qr--popout {
   position: fixed; z-index: 60; box-sizing: border-box;
-  left: calc(var(--cg-nav-space) + 12px);
-  top: calc(var(--topBarBlockSize) + var(--tt-inset-top, env(safe-area-inset-top, 0px)) + 8px);
-  bottom: auto;
-  width: min(360px, calc(100vw - var(--cg-nav-space) - 24px)); height: auto;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100dvh - var(--topBarBlockSize) - var(--tt-inset-top, 0px) - var(--tt-inset-bottom, 0px) - 24px);
-  min-height: 0; padding: 8px 12px 12px;
+  inset: auto var(--cg-qr-right, 8px) var(--cg-qr-bottom, 8px) auto;
+  width: min(420px, var(--cg-qr-width, calc(100vw - 16px))); height: fit-content;
+  max-width: var(--cg-qr-max-width, calc(100vw - 16px));
+  max-height: var(--cg-qr-max-height, calc(100dvh - 16px));
+  min-width: 0; min-height: 0; padding: 8px 12px 12px;
   color: var(--cg-text-primary); background: var(--cg-surface-raised);
   border: 1px solid var(--cg-edge); border-radius: 12px; box-shadow: var(--cg-shadow-panel);
 }
@@ -72,8 +70,13 @@ body.cg-active > #qr--popout {
 .cg-active #qr--popout > .qr--header > .qr--controls > .qr--close {
   display: inline-grid; place-items: center; width: 36px; height: 36px; cursor: pointer; color: var(--cg-text-secondary);
 }
-.cg-active #qr--popout > .qr--body { min-height: 0; }
-.cg-active #qr--popout > .qr--body > .qr--buttons { justify-content: flex-start; }
+.cg-active #qr--popout > .qr--body { min-height: 0; overflow: auto; }
+.cg-active #qr--popout > .qr--body > .qr--buttons { width: auto; justify-content: flex-start; }
+.cg-active #qr--popout > .qr--body .qr--button {
+  flex: 0 0 auto; width: fit-content; min-width: 0; max-width: 100%; box-sizing: border-box;
+  padding: 5px 9px;
+}
+.cg-active #qr--popout .qr--button-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .cg-active #send_form > .cg-qr-dock {
   order: 1; margin-inline-start: auto; padding: 4px 10px; min-height: 32px; cursor: pointer;
   font: inherit; font-size: 13px; color: var(--cg-text-secondary); background: var(--cg-surface-hover);
